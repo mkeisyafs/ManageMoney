@@ -1,23 +1,33 @@
 import { Tabs } from "expo-router";
 import { View, Text, StyleSheet } from "react-native";
 import { useTheme } from "@/contexts/ThemeContext";
+import {
+  Home,
+  ArrowLeftRight,
+  CreditCard,
+  BarChart3,
+  Settings,
+  LucideIcon,
+} from "lucide-react-native";
 
 function TabIcon({
-  emoji,
+  Icon,
   label,
   focused,
   color,
 }: {
-  emoji: string;
+  Icon: LucideIcon;
   label: string;
   focused: boolean;
   color: string;
 }) {
   return (
     <View style={styles.tabIconContainer}>
-      <Text style={[styles.emoji, { opacity: focused ? 1 : 0.6 }]}>
-        {emoji}
-      </Text>
+      <Icon
+        size={24}
+        color={color}
+        strokeWidth={focused ? 2.5 : 2}
+      />
       <Text
         style={[styles.label, { color, fontWeight: focused ? "600" : "400" }]}
       >
@@ -51,7 +61,7 @@ export default function TabLayout() {
           title: "Dashboard",
           tabBarIcon: ({ focused, color }) => (
             <TabIcon
-              emoji="🏠"
+              Icon={Home}
               label="Beranda"
               focused={focused}
               color={color}
@@ -66,7 +76,7 @@ export default function TabLayout() {
           title: "Transactions",
           tabBarIcon: ({ focused, color }) => (
             <TabIcon
-              emoji="💸"
+              Icon={ArrowLeftRight}
               label="Transaksi"
               focused={focused}
               color={color}
@@ -80,7 +90,7 @@ export default function TabLayout() {
         options={{
           title: "Accounts",
           tabBarIcon: ({ focused, color }) => (
-            <TabIcon emoji="💳" label="Akun" focused={focused} color={color} />
+            <TabIcon Icon={CreditCard} label="Akun" focused={focused} color={color} />
           ),
           tabBarLabel: () => null,
         }}
@@ -91,7 +101,7 @@ export default function TabLayout() {
           title: "Statistics",
           tabBarIcon: ({ focused, color }) => (
             <TabIcon
-              emoji="📊"
+              Icon={BarChart3}
               label="Statistik"
               focused={focused}
               color={color}
@@ -106,7 +116,7 @@ export default function TabLayout() {
           title: "Settings",
           tabBarIcon: ({ focused, color }) => (
             <TabIcon
-              emoji="⚙️"
+              Icon={Settings}
               label="Pengaturan"
               focused={focused}
               color={color}
@@ -123,9 +133,6 @@ const styles = StyleSheet.create({
   tabIconContainer: {
     alignItems: "center",
     justifyContent: "center",
-  },
-  emoji: {
-    fontSize: 24,
   },
   label: {
     fontSize: 10,
