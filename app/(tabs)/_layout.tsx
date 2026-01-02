@@ -1,23 +1,28 @@
 import { Tabs } from "expo-router";
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { useTheme } from "@/contexts/ThemeContext";
+import {
+  FileText,
+  BarChart2,
+  Wallet,
+  MoreHorizontal,
+  LucideIcon,
+} from "lucide-react-native";
 
 function TabIcon({
-  emoji,
+  Icon,
   label,
   focused,
   color,
 }: {
-  emoji: string;
+  Icon: LucideIcon;
   label: string;
   focused: boolean;
   color: string;
 }) {
   return (
     <View style={styles.tabIconContainer}>
-      <Text style={[styles.emoji, { opacity: focused ? 1 : 0.6 }]}>
-        {emoji}
-      </Text>
+      <Icon size={24} color={color} strokeWidth={focused ? 2.5 : 2} />
       <Text
         style={[styles.label, { color, fontWeight: focused ? "600" : "400" }]}
       >
@@ -35,24 +40,24 @@ export default function TabLayout() {
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: colors.card,
+          backgroundColor: colors.background,
           borderTopColor: colors.border,
           height: 70,
           paddingBottom: 8,
           paddingTop: 8,
         },
-        tabBarActiveTintColor: colors.primary,
+        tabBarActiveTintColor: colors.expense,
         tabBarInactiveTintColor: colors.textSecondary,
       }}
     >
       <Tabs.Screen
-        name="index"
+        name="transactions"
         options={{
-          title: "Dashboard",
+          title: "Transaksi",
           tabBarIcon: ({ focused, color }) => (
             <TabIcon
-              emoji="🏠"
-              label="Beranda"
+              Icon={FileText}
+              label="Transaksi"
               focused={focused}
               color={color}
             />
@@ -61,13 +66,13 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="transactions"
+        name="statistics"
         options={{
-          title: "Transactions",
+          title: "Statistik",
           tabBarIcon: ({ focused, color }) => (
             <TabIcon
-              emoji="💸"
-              label="Transaksi"
+              Icon={BarChart2}
+              label="Statistik"
               focused={focused}
               color={color}
             />
@@ -78,21 +83,11 @@ export default function TabLayout() {
       <Tabs.Screen
         name="accounts"
         options={{
-          title: "Accounts",
-          tabBarIcon: ({ focused, color }) => (
-            <TabIcon emoji="💳" label="Akun" focused={focused} color={color} />
-          ),
-          tabBarLabel: () => null,
-        }}
-      />
-      <Tabs.Screen
-        name="statistics"
-        options={{
-          title: "Statistics",
+          title: "Aset",
           tabBarIcon: ({ focused, color }) => (
             <TabIcon
-              emoji="📊"
-              label="Statistik"
+              Icon={Wallet}
+              label="Aset"
               focused={focused}
               color={color}
             />
@@ -103,16 +98,22 @@ export default function TabLayout() {
       <Tabs.Screen
         name="settings"
         options={{
-          title: "Settings",
+          title: "Lainnya",
           tabBarIcon: ({ focused, color }) => (
             <TabIcon
-              emoji="⚙️"
-              label="Pengaturan"
+              Icon={MoreHorizontal}
+              label="Lainnya"
               focused={focused}
               color={color}
             />
           ),
           tabBarLabel: () => null,
+        }}
+      />
+      <Tabs.Screen
+        name="index"
+        options={{
+          href: null, // Hide from tab bar
         }}
       />
     </Tabs>
@@ -123,9 +124,6 @@ const styles = StyleSheet.create({
   tabIconContainer: {
     alignItems: "center",
     justifyContent: "center",
-  },
-  emoji: {
-    fontSize: 24,
   },
   label: {
     fontSize: 10,
