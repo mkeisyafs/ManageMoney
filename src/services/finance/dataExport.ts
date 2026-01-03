@@ -1,5 +1,4 @@
 import { Platform } from "react-native";
-import * as FileSystem from "expo-file-system";
 import * as Sharing from "expo-sharing";
 import * as DocumentPicker from "expo-document-picker";
 import { format } from "date-fns";
@@ -19,6 +18,12 @@ import {
   saveBudget,
   saveRecurringTransaction,
 } from "@/services/storage/mmkv";
+
+// Conditionally import expo-file-system (not available on web)
+let FileSystem: any = null;
+if (Platform.OS !== "web") {
+  FileSystem = require("expo-file-system");
+}
 
 /**
  * Export all data to JSON format
@@ -252,6 +257,8 @@ async function saveToFileNative(
   filename: string,
   mimeType: string
 ): Promise<void> {
+  if (!FileSystem) return;
+
   const fileUri = `${FileSystem.documentDirectory}${filename}`;
 
   await FileSystem.writeAsStringAsync(fileUri, content, {
@@ -270,6 +277,8 @@ async function saveToFileNative(
  * Pick and read file from device (Native)
  */
 async function pickAndReadFileNative(): Promise<string | null> {
+  if (!FileSystem) return null;
+
   try {
     const result = await DocumentPicker.getDocumentAsync({
       type: ["application/json", "text/plain"],
