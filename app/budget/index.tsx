@@ -14,7 +14,7 @@ import { formatCurrency, formatPercentage } from "@/utils/formatters";
 
 export default function BudgetScreen() {
   const { colors } = useTheme();
-  const { budgetsWithProgress } = useBudgets();
+  const { budgetProgress } = useBudgets();
   const { settings } = useSettings();
 
   return (
@@ -32,7 +32,7 @@ export default function BudgetScreen() {
       </View>
 
       <ScrollView style={styles.list}>
-        {budgetsWithProgress.length === 0 ? (
+        {budgetProgress.length === 0 ? (
           <View style={styles.emptyState}>
             <Text style={styles.emptyIcon}>💰</Text>
             <Text style={[styles.emptyTitle, { color: colors.text }]}>
@@ -55,22 +55,21 @@ export default function BudgetScreen() {
             </TouchableOpacity>
           </View>
         ) : (
-          budgetsWithProgress.map((budget) => {
-            const percentage = (budget.spent / budget.amount) * 100;
-            const isOverBudget = percentage > 100;
+          budgetProgress.map((item) => {
+            const isOverBudget = item.percentage > 100;
             return (
               <View
-                key={budget.id}
+                key={item.budget.id}
                 style={[styles.item, { backgroundColor: colors.card }]}
               >
                 <View style={styles.itemHeader}>
-                  <Text style={styles.categoryIcon}>{budget.categoryIcon}</Text>
+                  <Text style={styles.categoryIcon}>{item.category.icon}</Text>
                   <View style={styles.itemInfo}>
                     <Text style={[styles.itemName, { color: colors.text }]}>
-                      {budget.categoryName}
+                      {item.category.name}
                     </Text>
                     <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
-                      {budget.period}
+                      {item.budget.period}
                     </Text>
                   </View>
                   <Text
@@ -79,7 +78,7 @@ export default function BudgetScreen() {
                       fontWeight: "600",
                     }}
                   >
-                    {formatPercentage(Math.min(percentage, 100))}
+                    {formatPercentage(Math.min(item.percentage, 100))}
                   </Text>
                 </View>
                 <View
@@ -95,17 +94,17 @@ export default function BudgetScreen() {
                         backgroundColor: isOverBudget
                           ? colors.expense
                           : colors.primary,
-                        width: `${Math.min(percentage, 100)}%`,
+                        width: `${Math.min(item.percentage, 100)}%`,
                       },
                     ]}
                   />
                 </View>
                 <View style={styles.budgetDetails}>
                   <Text style={{ color: colors.textSecondary }}>
-                    {formatCurrency(budget.spent, settings.currency)}
+                    {formatCurrency(item.spent, settings.currency)}
                   </Text>
                   <Text style={{ color: colors.textSecondary }}>
-                    dari {formatCurrency(budget.amount, settings.currency)}
+                    dari {formatCurrency(item.budget.amount, settings.currency)}
                   </Text>
                 </View>
               </View>

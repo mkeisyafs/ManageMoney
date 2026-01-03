@@ -6,6 +6,7 @@ import {
   Switch,
   Alert,
   StyleSheet,
+  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
@@ -56,53 +57,158 @@ export default function SettingsScreen() {
   };
 
   const handleImport = async () => {
-    Alert.alert("Import Data", "Pilih mode import:", [
-      {
-        text: "Gabung (Merge)",
-        onPress: async () => {
-          try {
-            const result = await importFromFile("merge");
-            if (result.success) {
-              Alert.alert("Sukses", `Data berhasil diimpor`);
-            }
-          } catch (error) {
-            Alert.alert("Error", "Gagal mengimpor data");
-          }
-        },
-      },
-      {
-        text: "Ganti Semua (Replace)",
-        onPress: async () => {
-          try {
-            const result = await importFromFile("replace");
-            if (result.success) {
-              Alert.alert("Sukses", "Data berhasil diganti");
-            }
-          } catch (error) {
-            Alert.alert("Error", "Gagal mengimpor data");
-          }
-        },
-      },
-      { text: "Batal", style: "cancel" },
-    ]);
-  };
+    if (Platform.OS === "web") {
+      // Web: use window.confirm
+      const mode = window.confirm(
+        "Pilih mode import:\n\nOK = Gabung (Merge)\nCancel = Ganti Semua (Replace)\n\nAtau tutup dialog ini untuk batal."
+      );
 
-  const handleClearData = () => {
-    Alert.alert(
-      "⚠️ Hapus Semua Data?",
-      "Semua akun, transaksi, dan pengaturan akan dihapus. Tidak bisa dibatalkan!",
-      [
-        { text: "Batal", style: "cancel" },
+      const selectedMode = mode ? "merge" : "replace";
+      const confirmReplace = mode
+        ? true
+        : window.confirm("PERHATIAN: Semua data akan diganti. Lanjutkan?");
+
+      if (!confirmReplace && !mode) return;
+
+      try {
+        const result = await importFromFile(selectedMode);
+        if (result.success) {
+          window.alert(`Sukses! ${result.imported} item berhasil diimpor.`);
+        } else {
+          window.alert(`Error: ${result.errors.join(", ")}`);
+        }
+      } catch (error) {
+        window.alert("Gagal mengimpor data");
+      }
+    } else {
+      // Native: use Alert.alert
+      Alert.alert("Import Data", "Pilih mode import:", [
         {
-          text: "Hapus Semua",
-          style: "destructive",
+          text: "Gabung (Merge)",
           onPress: async () => {
-            await clearAllData();
-            Alert.alert("Sukses", "Semua data telah dihapus");
+            try {
+              const result = await importFromFile("merge");
+              if (result.success) {
+                Alert.alert("Sukses", `Data berhasil diimpor`);
+              }
+            } catch (error) {
+              Alert.alert("Error", "Gagal mengimpor data");
+            }
           },
         },
-      ]
-    );
+        {
+          text: "Ganti Semua (Replace)",
+          onPress: async () => {
+            try {
+              const result = await importFromFile("replace");
+              if (result.success) {
+                Alert.alert("Sukses", "Data berhasil diganti");
+              }
+            } catch (error) {
+              Alert.alert("Error", "Gagal mengimpor data");
+            }
+          },
+        },
+        { text: "Batal", style: "cancel" },
+      ]);
+    }
+  };
+
+  const handleClearData = async () => {
+    if (Platform.OS === "web") {
+      // Web: use window.confirm
+      const confirmed = window.confirm(
+        "⚠️ HAPUS SEMUA DATA?\n\nSemua akun, transaksi, dan pengaturan akan dihapus.\nTindakan ini TIDAK BISA dibatalkan!\n\nKlik OK untuk menghapus."
+      );
+
+      if (confirmed) {
+        await clearAllData();
+        window.alert("Sukses! Semua data telah dihapus.");
+        window.location.reload();
+      }
+    } else {
+      // Native: use Alert.alert
+      Alert.alert(
+        "⚠️ Hapus Semua Data?",
+        "Semua akun, transaksi, dan pengaturan akan dihapus. Tidak bisa dibatalkan!",
+        [
+          { text: "Batal", style: "cancel" },
+          {
+            text: "Hapus Semua",
+            style: "destructive",
+            onPress: async () => {
+              await clearAllData();
+              Alert.alert("Sukses", "Semua data telah dihapus");
+            },
+          },
+        ]
+      );
+    }
+  };
+
+  const handlePinLock = () => {
+    if (isPinEnabled) {
+      Alert.alert(
+        "PIN Lock Aktif",
+        "PIN Lock saat ini aktif. Fitur ini mengamankan aplikasi dengan PIN 6 digit.",
+        [
+          { text: "OK" },
+          {
+            text: "Nonaktifkan",
+            style: "destructive",
+            onPress: () => {
+              Alert.alert(
+                "Info",
+                "Fitur menonaktifkan PIN akan tersedia di versi berikutnya"
+              );
+            },
+          },
+        ]
+      );
+    } else {
+      Alert.alert(
+        "Aktifkan PIN Lock?",
+        "PIN Lock akan mengamankan aplikasi dengan PIN 6 digit setiap kali dibuka.",
+        [
+          { text: "Batal", style: "cancel" },
+          {
+            text: "Aktifkan",
+            onPress: () => {
+              Alert.alert(
+                "Info",
+                "Fitur PIN Lock akan tersedia di versi berikutnya"
+              );
+            },
+          },
+        ]
+      );
+    }
+  };
+
+  const handleBiometric = () => {
+    if (isBiometricAvailable) {
+      Alert.alert(
+        "Biometrik",
+        "Gunakan sidik jari atau Face ID untuk membuka aplikasi dengan cepat.",
+        [
+          { text: "OK" },
+          {
+            text: settings.biometricEnabled ? "Nonaktifkan" : "Aktifkan",
+            onPress: () => {
+              Alert.alert(
+                "Info",
+                "Fitur biometrik akan tersedia di versi berikutnya"
+              );
+            },
+          },
+        ]
+      );
+    } else {
+      Alert.alert(
+        "Biometrik Tidak Tersedia",
+        "Perangkat ini tidak mendukung autentikasi biometrik atau belum dikonfigurasi."
+      );
+    }
   };
 
   const SettingItem = ({
@@ -178,6 +284,7 @@ export default function SettingsScreen() {
           Icon={Moon}
           title="Mode Gelap"
           subtitle={isDark ? "Aktif" : "Nonaktif"}
+          onPress={toggleTheme}
           rightElement={
             <Switch
               value={isDark}
@@ -195,13 +302,13 @@ export default function SettingsScreen() {
           Icon={Lock}
           title="PIN Lock"
           subtitle={isPinEnabled ? "Aktif" : "Tidak aktif"}
-          onPress={() => {}}
+          onPress={handlePinLock}
         />
         <SettingItem
           Icon={Fingerprint}
           title="Biometrik"
           subtitle={isBiometricAvailable ? "Tersedia" : "Tidak tersedia"}
-          onPress={() => {}}
+          onPress={handleBiometric}
         />
 
         {/* Manage Section */}

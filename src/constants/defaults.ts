@@ -37,6 +37,13 @@ export const DEFAULT_EXPENSE_CATEGORIES: Omit<Category, "id">[] = [
     color: "#607D8B",
     isDefault: true,
   },
+  {
+    name: "Penyesuaian",
+    type: "expense",
+    icon: "⚖️",
+    color: "#78909C",
+    isDefault: true,
+  },
 ];
 
 // ==================== DEFAULT INCOME CATEGORIES ====================
@@ -74,6 +81,13 @@ export const DEFAULT_INCOME_CATEGORIES: Omit<Category, "id">[] = [
     type: "income",
     icon: "💸",
     color: "#3498DB",
+    isDefault: true,
+  },
+  {
+    name: "Penyesuaian",
+    type: "income",
+    icon: "⚖️",
+    color: "#78909C",
     isDefault: true,
   },
 ];

@@ -12,8 +12,41 @@ import { useTheme } from "@/contexts/ThemeContext";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useSettings } from "@/hooks/useSettings";
 import { formatCurrency } from "@/utils/formatters";
-import { Account } from "@/types";
-import { Plus, ChevronRight } from "lucide-react-native";
+import { Account, AccountType } from "@/types";
+import {
+  Plus,
+  Wallet,
+  Building2,
+  Smartphone,
+  CreditCard,
+  TrendingUp,
+  Bitcoin,
+  Receipt,
+  CircleDollarSign,
+  LucideIcon,
+} from "lucide-react-native";
+
+// Helper function to get Lucide icon by account type
+function getAccountIcon(type: AccountType): LucideIcon {
+  switch (type) {
+    case "cash":
+      return Wallet;
+    case "bank":
+      return Building2;
+    case "ewallet":
+      return Smartphone;
+    case "credit_card":
+      return CreditCard;
+    case "investment":
+      return TrendingUp;
+    case "crypto":
+      return Bitcoin;
+    case "loan":
+      return Receipt;
+    default:
+      return CircleDollarSign;
+  }
+}
 
 type ViewTab = "aset" | "liabilitas";
 
@@ -143,49 +176,65 @@ export default function AccountsScreen() {
             </TouchableOpacity>
           </View>
         ) : (
-          accounts.map((account: Account & { balance: number }) => (
-            <TouchableOpacity
-              key={account.id}
-              style={styles.accountItem}
-              onPress={() => router.push(`/account/${account.id}`)}
-            >
-              <View
-                style={[
-                  styles.accountIconBg,
-                  { backgroundColor: account.color },
-                ]}
+          accounts.map((account: Account & { balance: number }) => {
+            const AccountIcon = getAccountIcon(account.type);
+            const typeLabel =
+              account.type === "cash"
+                ? "Tunai"
+                : account.type === "bank"
+                ? "Bank"
+                : account.type === "ewallet"
+                ? "E-Wallet"
+                : account.type === "credit_card"
+                ? "Kartu Kredit"
+                : account.type === "investment"
+                ? "Investasi"
+                : account.type === "crypto"
+                ? "Cryptocurrency"
+                : account.type === "loan"
+                ? "Pinjaman"
+                : "Lainnya";
+            return (
+              <TouchableOpacity
+                key={account.id}
+                style={styles.accountItem}
+                onPress={() => router.push(`/account/${account.id}`)}
               >
-                <Text style={styles.accountIcon}>{account.icon}</Text>
-              </View>
-              <View style={styles.accountInfo}>
-                <Text style={[styles.accountName, { color: colors.text }]}>
-                  {account.name}
-                </Text>
-                <Text
-                  style={[styles.accountType, { color: colors.textSecondary }]}
+                <View
+                  style={[
+                    styles.accountIconBg,
+                    { backgroundColor: account.color || colors.primary },
+                  ]}
                 >
-                  {account.type === "cash"
-                    ? "Tunai"
-                    : account.type === "bank"
-                    ? "Bank"
-                    : account.type === "credit_card"
-                    ? "Kartu Kredit"
-                    : account.type}
+                  <AccountIcon size={22} color="#fff" strokeWidth={1.5} />
+                </View>
+                <View style={styles.accountInfo}>
+                  <Text style={[styles.accountName, { color: colors.text }]}>
+                    {account.name}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.accountType,
+                      { color: colors.textSecondary },
+                    ]}
+                  >
+                    {typeLabel}
+                  </Text>
+                </View>
+                <Text
+                  style={[
+                    styles.accountBalance,
+                    {
+                      color:
+                        activeTab === "aset" ? colors.income : colors.expense,
+                    },
+                  ]}
+                >
+                  Rp {account.balance.toLocaleString("id-ID")}
                 </Text>
-              </View>
-              <Text
-                style={[
-                  styles.accountBalance,
-                  {
-                    color:
-                      activeTab === "aset" ? colors.income : colors.expense,
-                  },
-                ]}
-              >
-                Rp {account.balance.toLocaleString("id-ID")}
-              </Text>
-            </TouchableOpacity>
-          ))
+              </TouchableOpacity>
+            );
+          })
         )}
 
         {/* Total */}

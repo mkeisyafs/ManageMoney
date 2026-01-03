@@ -1,16 +1,9 @@
+import { Platform } from "react-native";
 import * as FileSystem from "expo-file-system";
 import * as Sharing from "expo-sharing";
 import * as DocumentPicker from "expo-document-picker";
 import { format } from "date-fns";
-import {
-  ExportData,
-  Account,
-  Transaction,
-  Category,
-  Budget,
-  RecurringTransaction,
-  AppSettings,
-} from "@/types";
+import { ExportData } from "@/types";
 import { APP_NAME, APP_VERSION } from "@/constants/defaults";
 import {
   getAllData,
@@ -20,7 +13,6 @@ import {
   getCategories,
   getBudgets,
   getRecurringTransactions,
-  getSettings,
   saveTransaction,
   saveAccount,
   saveCategory,
@@ -109,7 +101,6 @@ export function importFromJSON(
 
   try {
     if (mode === "replace") {
-      // Replace all data
       setAllData({
         accounts: data.accounts,
         transactions: data.transactions,
@@ -125,7 +116,6 @@ export function importFromJSON(
         data.budgets.length +
         data.recurringTransactions.length;
     } else {
-      // Merge mode - add items that don't exist
       const existingAccounts = new Set(getAccounts().map((a) => a.id));
       const existingTransactions = new Set(getTransactions().map((t) => t.id));
       const existingCategories = new Set(getCategories().map((c) => c.id));
@@ -134,7 +124,6 @@ export function importFromJSON(
         getRecurringTransactions().map((r) => r.id)
       );
 
-      // Import accounts
       for (const account of data.accounts) {
         if (!existingAccounts.has(account.id)) {
           saveAccount({
@@ -149,7 +138,6 @@ export function importFromJSON(
         }
       }
 
-      // Import categories
       for (const category of data.categories) {
         if (!existingCategories.has(category.id)) {
           saveCategory({
@@ -162,7 +150,6 @@ export function importFromJSON(
         }
       }
 
-      // Import transactions
       for (const transaction of data.transactions) {
         if (!existingTransactions.has(transaction.id)) {
           saveTransaction({
@@ -178,7 +165,6 @@ export function importFromJSON(
         }
       }
 
-      // Import budgets
       for (const budget of data.budgets) {
         if (!existingBudgets.has(budget.id)) {
           saveBudget({
@@ -191,7 +177,6 @@ export function importFromJSON(
         }
       }
 
-      // Import recurring transactions
       for (const recurring of data.recurringTransactions) {
         if (!existingRecurring.has(recurring.id)) {
           saveRecurringTransaction({
@@ -218,9 +203,51 @@ export function importFromJSON(
 }
 
 /**
- * Save file to device and open share sheet
+ * Download file in browser (Web)
  */
-export async function saveToFile(
+function downloadFileWeb(
+  content: string,
+  filename: string,
+  mimeType: string
+): void {
+  const blob = new Blob([content], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+/**
+ * Read file from input in browser (Web)
+ */
+function readFileWeb(): Promise<string | null> {
+  return new Promise((resolve) => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".json,application/json";
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) {
+        resolve(null);
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => resolve(null);
+      reader.readAsText(file);
+    };
+    input.click();
+  });
+}
+
+/**
+ * Save file to device and open share sheet (Native)
+ */
+async function saveToFileNative(
   content: string,
   filename: string,
   mimeType: string
@@ -240,36 +267,9 @@ export async function saveToFile(
 }
 
 /**
- * Export and share JSON data
+ * Pick and read file from device (Native)
  */
-export async function exportAndShareJSON(): Promise<void> {
-  const data = exportToJSON();
-  const content = JSON.stringify(data, null, 2);
-  const filename = `ManageMoney_backup_${format(
-    new Date(),
-    "yyyyMMdd_HHmmss"
-  )}.json`;
-
-  await saveToFile(content, filename, "application/json");
-}
-
-/**
- * Export and share CSV data
- */
-export async function exportAndShareCSV(): Promise<void> {
-  const content = exportTransactionsToCSV();
-  const filename = `ManageMoney_transactions_${format(
-    new Date(),
-    "yyyyMMdd_HHmmss"
-  )}.csv`;
-
-  await saveToFile(content, filename, "text/csv");
-}
-
-/**
- * Pick and read file from device
- */
-export async function pickAndReadFile(): Promise<string | null> {
+async function pickAndReadFileNative(): Promise<string | null> {
   try {
     const result = await DocumentPicker.getDocumentAsync({
       type: ["application/json", "text/plain"],
@@ -293,12 +293,53 @@ export async function pickAndReadFile(): Promise<string | null> {
 }
 
 /**
+ * Export and share JSON data
+ */
+export async function exportAndShareJSON(): Promise<void> {
+  const data = exportToJSON();
+  const content = JSON.stringify(data, null, 2);
+  const filename = `ManageMoney_backup_${format(
+    new Date(),
+    "yyyyMMdd_HHmmss"
+  )}.json`;
+
+  if (Platform.OS === "web") {
+    downloadFileWeb(content, filename, "application/json");
+  } else {
+    await saveToFileNative(content, filename, "application/json");
+  }
+}
+
+/**
+ * Export and share CSV data
+ */
+export async function exportAndShareCSV(): Promise<void> {
+  const content = exportTransactionsToCSV();
+  const filename = `ManageMoney_transactions_${format(
+    new Date(),
+    "yyyyMMdd_HHmmss"
+  )}.csv`;
+
+  if (Platform.OS === "web") {
+    downloadFileWeb(content, filename, "text/csv");
+  } else {
+    await saveToFileNative(content, filename, "text/csv");
+  }
+}
+
+/**
  * Import data from picked file
  */
 export async function importFromFile(
   mode: "merge" | "replace"
 ): Promise<{ success: boolean; imported: number; errors: string[] }> {
-  const content = await pickAndReadFile();
+  let content: string | null = null;
+
+  if (Platform.OS === "web") {
+    content = await readFileWeb();
+  } else {
+    content = await pickAndReadFileNative();
+  }
 
   if (!content) {
     return { success: false, imported: 0, errors: ["No file selected"] };

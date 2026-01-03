@@ -14,7 +14,7 @@ import { formatCurrency } from "@/utils/formatters";
 
 export default function RecurringScreen() {
   const { colors } = useTheme();
-  const { recurringTransactions, toggleRecurring } = useRecurring();
+  const { recurring, toggleEnabled } = useRecurring();
   const { settings } = useSettings();
 
   return (
@@ -34,7 +34,7 @@ export default function RecurringScreen() {
       </View>
 
       <ScrollView style={styles.list}>
-        {recurringTransactions.length === 0 ? (
+        {recurring.length === 0 ? (
           <View style={styles.emptyState}>
             <Text style={styles.emptyIcon}>🔄</Text>
             <Text style={[styles.emptyTitle, { color: colors.text }]}>
@@ -57,33 +57,38 @@ export default function RecurringScreen() {
             </TouchableOpacity>
           </View>
         ) : (
-          recurringTransactions.map((recurring) => (
+          recurring.map((item) => (
             <View
-              key={recurring.id}
+              key={item.id}
               style={[styles.item, { backgroundColor: colors.card }]}
             >
               <View style={styles.itemContent}>
                 <Text style={[styles.itemName, { color: colors.text }]}>
-                  {recurring.name}
+                  {item.note ||
+                    (item.type === "income"
+                      ? "Pemasukan Rutin"
+                      : item.type === "expense"
+                      ? "Pengeluaran Rutin"
+                      : "Transfer Rutin")}
                 </Text>
                 <Text style={{ color: colors.textSecondary }}>
-                  {formatCurrency(recurring.amount, settings.currency)} •{" "}
-                  {recurring.frequency}
+                  {formatCurrency(item.amount, settings.currency)} •{" "}
+                  {item.frequency}
                 </Text>
               </View>
               <TouchableOpacity
                 style={[
                   styles.toggle,
                   {
-                    backgroundColor: recurring.isEnabled
+                    backgroundColor: item.isEnabled
                       ? colors.primary
                       : colors.border,
                   },
                 ]}
-                onPress={() => toggleRecurring(recurring.id)}
+                onPress={() => toggleEnabled(item.id)}
               >
                 <Text style={{ color: "#fff" }}>
-                  {recurring.isEnabled ? "ON" : "OFF"}
+                  {item.isEnabled ? "ON" : "OFF"}
                 </Text>
               </TouchableOpacity>
             </View>

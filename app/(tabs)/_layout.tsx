@@ -1,4 +1,4 @@
-import { Tabs } from "expo-router";
+   import { Tabs } from "expo-router";
 import { View, Text, StyleSheet } from "react-native";
 import { useTheme } from "@/contexts/ThemeContext";
 import {
