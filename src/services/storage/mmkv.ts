@@ -116,9 +116,49 @@ export async function initializeDefaultData(): Promise<void> {
     })),
   ];
 
+  // Initialize default accounts
+  const defaultAccounts: Account[] = [
+    {
+      id: generateId(),
+      name: "Tunai",
+      type: "cash",
+      currency: "IDR",
+      icon: "💵",
+      color: "#4CAF50",
+      isLiability: false,
+      createdAt: now(),
+      updatedAt: now(),
+    },
+    {
+      id: generateId(),
+      name: "Bank",
+      type: "bank",
+      currency: "IDR",
+      icon: "🏦",
+      color: "#1976D2",
+      isLiability: false,
+      createdAt: now(),
+      updatedAt: now(),
+    },
+    {
+      id: generateId(),
+      name: "Kartu",
+      type: "credit_card",
+      currency: "IDR",
+      icon: "💳",
+      color: "#F44336",
+      isLiability: true,
+      createdAt: now(),
+      updatedAt: now(),
+    },
+  ];
+
+  // Set onboardingCompleted to true by default
+  const defaultSettings = { ...DEFAULT_SETTINGS, onboardingCompleted: true };
+
   cache.categories = categories;
-  cache.settings = DEFAULT_SETTINGS;
-  cache.accounts = [];
+  cache.settings = defaultSettings;
+  cache.accounts = defaultAccounts;
   cache.transactions = [];
   cache.budgets = [];
   cache.recurring = [];
@@ -126,8 +166,8 @@ export async function initializeDefaultData(): Promise<void> {
 
   await Promise.all([
     saveToStorage(KEYS.CATEGORIES, categories),
-    saveToStorage(KEYS.SETTINGS, DEFAULT_SETTINGS),
-    saveToStorage(KEYS.ACCOUNTS, []),
+    saveToStorage(KEYS.SETTINGS, defaultSettings),
+    saveToStorage(KEYS.ACCOUNTS, defaultAccounts),
     saveToStorage(KEYS.TRANSACTIONS, []),
     saveToStorage(KEYS.BUDGETS, []),
     saveToStorage(KEYS.RECURRING, []),

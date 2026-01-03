@@ -31,15 +31,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { settings, enablePin, disablePin, enableBiometric, disableBiometric } =
     useSettings();
 
-  const [isLocked, setIsLocked] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  // Default to unlocked - only lock if security is enabled
+  const [isLocked, setIsLocked] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(true);
   const [isBiometricAvailable, setIsBiometricAvailable] = useState(false);
 
   useEffect(() => {
     checkBiometricAvailability();
 
-    // If no security is enabled, auto-unlock
-    if (!settings.pinEnabled && !settings.biometricEnabled) {
+    // Only lock if security is enabled
+    if (settings.pinEnabled || settings.biometricEnabled) {
+      setIsLocked(true);
+      setIsAuthenticated(false);
+    } else {
       setIsLocked(false);
       setIsAuthenticated(true);
     }

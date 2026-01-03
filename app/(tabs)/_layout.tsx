@@ -1,5 +1,5 @@
 import { Tabs } from "expo-router";
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet } from "react-native";
 import { useTheme } from "@/contexts/ThemeContext";
 import {
   FileText,
@@ -22,9 +22,10 @@ function TabIcon({
 }) {
   return (
     <View style={styles.tabIconContainer}>
-      <Icon size={24} color={color} strokeWidth={focused ? 2.5 : 2} />
+      <Icon size={20} color={color} strokeWidth={focused ? 2.5 : 2} />
       <Text
         style={[styles.label, { color, fontWeight: focused ? "600" : "400" }]}
+        numberOfLines={1}
       >
         {label}
       </Text>
@@ -37,14 +38,15 @@ export default function TabLayout() {
 
   return (
     <Tabs
+      initialRouteName="transactions"
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
           backgroundColor: colors.background,
           borderTopColor: colors.border,
-          height: 70,
-          paddingBottom: 8,
-          paddingTop: 8,
+          height: 56,
+          paddingBottom: 6,
+          paddingTop: 6,
         },
         tabBarActiveTintColor: colors.expense,
         tabBarInactiveTintColor: colors.textSecondary,
@@ -113,8 +115,9 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          href: null, // Hide from tab bar
+          href: null,
         }}
+        redirect
       />
     </Tabs>
   );
@@ -124,9 +127,11 @@ const styles = StyleSheet.create({
   tabIconContainer: {
     alignItems: "center",
     justifyContent: "center",
+    minWidth: 60,
   },
   label: {
-    fontSize: 10,
+    fontSize: 9,
     marginTop: 2,
+    textAlign: "center",
   },
 });

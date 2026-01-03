@@ -19,6 +19,20 @@ import {
   importFromFile,
 } from "@/services/finance/dataExport";
 import { APP_VERSION } from "@/constants/defaults";
+import {
+  Moon,
+  Lock,
+  Fingerprint,
+  Download,
+  Upload,
+  Trash2,
+  Tag,
+  PiggyBank,
+  RefreshCw,
+  Info,
+  ChevronRight,
+  FileDown,
+} from "lucide-react-native";
 
 export default function SettingsScreen() {
   const { colors, isDark, toggleTheme } = useTheme();
@@ -85,7 +99,6 @@ export default function SettingsScreen() {
           onPress: async () => {
             await clearAllData();
             Alert.alert("Sukses", "Semua data telah dihapus");
-            router.replace("/(auth)/onboarding");
           },
         },
       ]
@@ -93,14 +106,14 @@ export default function SettingsScreen() {
   };
 
   const SettingItem = ({
-    icon,
+    Icon,
     title,
     subtitle,
     onPress,
     rightElement,
     danger,
   }: {
-    icon: string;
+    Icon: any;
     title: string;
     subtitle?: string;
     onPress?: () => void;
@@ -110,10 +123,18 @@ export default function SettingsScreen() {
     <TouchableOpacity
       style={styles.settingItem}
       onPress={onPress}
-      disabled={!onPress}
+      disabled={!onPress && !rightElement}
     >
-      <View style={styles.settingIcon}>
-        <Text style={styles.iconText}>{icon}</Text>
+      <View
+        style={[
+          styles.settingIconBg,
+          { backgroundColor: danger ? colors.expense + "20" : colors.card },
+        ]}
+      >
+        <Icon
+          size={20}
+          color={danger ? colors.expense : colors.textSecondary}
+        />
       </View>
       <View style={styles.settingContent}>
         <Text
@@ -125,184 +146,165 @@ export default function SettingsScreen() {
           {title}
         </Text>
         {subtitle && (
-          <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
+          <Text
+            style={[styles.settingSubtitle, { color: colors.textSecondary }]}
+          >
             {subtitle}
           </Text>
         )}
       </View>
-      {rightElement}
+      {rightElement ||
+        (onPress && <ChevronRight size={20} color={colors.textSecondary} />)}
     </TouchableOpacity>
-  );
-
-  const SectionHeader = ({ title }: { title: string }) => (
-    <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>
-      {title}
-    </Text>
   );
 
   return (
     <SafeAreaView
       style={[styles.container, { backgroundColor: colors.background }]}
     >
-      <ScrollView>
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={[styles.title, { color: colors.text }]}>Pengaturan</Text>
-        </View>
+      {/* Header */}
+      <View style={[styles.header, { borderBottomColor: colors.border }]}>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>
+          Lainnya
+        </Text>
+      </View>
 
-        {/* Appearance */}
-        <View style={[styles.section, { backgroundColor: colors.card }]}>
-          <SectionHeader title="TAMPILAN" />
-          <SettingItem
-            icon="🌙"
-            title="Mode Gelap"
-            subtitle={isDark ? "Aktif" : "Nonaktif"}
-            rightElement={
-              <Switch
-                value={isDark}
-                onValueChange={toggleTheme}
-                trackColor={{ false: colors.border, true: colors.primary }}
-              />
-            }
-          />
-        </View>
+      <ScrollView style={styles.list}>
+        {/* Appearance Section */}
+        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>
+          TAMPILAN
+        </Text>
+        <SettingItem
+          Icon={Moon}
+          title="Mode Gelap"
+          subtitle={isDark ? "Aktif" : "Nonaktif"}
+          rightElement={
+            <Switch
+              value={isDark}
+              onValueChange={toggleTheme}
+              trackColor={{ false: colors.border, true: colors.primary }}
+            />
+          }
+        />
 
-        {/* Security */}
-        <View style={[styles.section, { backgroundColor: colors.card }]}>
-          <SectionHeader title="KEAMANAN" />
-          <SettingItem
-            icon="🔐"
-            title="PIN Lock"
-            subtitle={isPinEnabled ? "Aktif" : "Tidak aktif"}
-            onPress={() => {}}
-          />
-          <SettingItem
-            icon="👆"
-            title="Biometrik"
-            subtitle={isBiometricAvailable ? "Tersedia" : "Tidak tersedia"}
-            onPress={() => {}}
-          />
-        </View>
+        {/* Security Section */}
+        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>
+          KEAMANAN
+        </Text>
+        <SettingItem
+          Icon={Lock}
+          title="PIN Lock"
+          subtitle={isPinEnabled ? "Aktif" : "Tidak aktif"}
+          onPress={() => {}}
+        />
+        <SettingItem
+          Icon={Fingerprint}
+          title="Biometrik"
+          subtitle={isBiometricAvailable ? "Tersedia" : "Tidak tersedia"}
+          onPress={() => {}}
+        />
 
-        {/* Data Management */}
-        <View style={[styles.section, { backgroundColor: colors.card }]}>
-          <SectionHeader title="KELOLA DATA" />
-          <SettingItem
-            icon="📤"
-            title="Ekspor JSON"
-            subtitle="Backup semua data"
-            onPress={handleExportJSON}
-          />
-          <SettingItem
-            icon="📊"
-            title="Ekspor CSV"
-            subtitle="Untuk spreadsheet"
-            onPress={handleExportCSV}
-          />
-          <SettingItem
-            icon="📥"
-            title="Impor Data"
-            subtitle="Dari file JSON"
-            onPress={handleImport}
-          />
-          <SettingItem
-            icon="🗑️"
-            title="Hapus Semua Data"
-            subtitle="Reset aplikasi"
-            onPress={handleClearData}
-            danger
-          />
-        </View>
+        {/* Manage Section */}
+        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>
+          KELOLA
+        </Text>
+        <SettingItem
+          Icon={Tag}
+          title="Kategori"
+          subtitle="Kelola kategori transaksi"
+          onPress={() => router.push("/category")}
+        />
+        <SettingItem
+          Icon={PiggyBank}
+          title="Anggaran"
+          subtitle="Atur batas pengeluaran"
+          onPress={() => router.push("/budget")}
+        />
+        <SettingItem
+          Icon={RefreshCw}
+          title="Transaksi Berulang"
+          subtitle="Kelola pembayaran otomatis"
+          onPress={() => router.push("/recurring")}
+        />
 
-        {/* Manage */}
-        <View style={[styles.section, { backgroundColor: colors.card }]}>
-          <SectionHeader title="KELOLA" />
-          <SettingItem
-            icon="🏷️"
-            title="Kategori"
-            subtitle="Kelola kategori pengeluaran & pemasukan"
-            onPress={() => router.push("/category")}
-          />
-          <SettingItem
-            icon="💰"
-            title="Anggaran"
-            subtitle="Atur batas pengeluaran per kategori"
-            onPress={() => router.push("/budget")}
-          />
-          <SettingItem
-            icon="🔄"
-            title="Transaksi Berulang"
-            subtitle="Kelola pembayaran otomatis"
-            onPress={() => router.push("/recurring")}
-          />
-        </View>
+        {/* Data Section */}
+        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>
+          DATA
+        </Text>
+        <SettingItem
+          Icon={Download}
+          title="Ekspor JSON"
+          subtitle="Backup semua data"
+          onPress={handleExportJSON}
+        />
+        <SettingItem
+          Icon={FileDown}
+          title="Ekspor CSV"
+          subtitle="Untuk spreadsheet"
+          onPress={handleExportCSV}
+        />
+        <SettingItem
+          Icon={Upload}
+          title="Impor Data"
+          subtitle="Dari file JSON"
+          onPress={handleImport}
+        />
+        <SettingItem
+          Icon={Trash2}
+          title="Hapus Semua Data"
+          subtitle="Reset aplikasi"
+          onPress={handleClearData}
+          danger
+        />
 
-        {/* About */}
-        <View
-          style={[
-            styles.section,
-            styles.lastSection,
-            { backgroundColor: colors.card },
-          ]}
-        >
-          <SectionHeader title="TENTANG" />
-          <SettingItem
-            icon="ℹ️"
-            title="Versi Aplikasi"
-            subtitle={APP_VERSION}
-          />
-        </View>
+        {/* About Section */}
+        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>
+          TENTANG
+        </Text>
+        <SettingItem
+          Icon={Info}
+          title="Versi Aplikasi"
+          subtitle={APP_VERSION}
+        />
+
+        <View style={styles.bottomPadding} />
       </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
+  container: { flex: 1 },
   header: {
-    padding: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
   },
-  title: {
-    fontSize: 28,
-    fontWeight: "bold",
-  },
-  section: {
-    marginHorizontal: 16,
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 16,
-  },
-  lastSection: {
-    marginBottom: 24,
-  },
-  sectionHeader: {
+  headerTitle: { fontSize: 18, fontWeight: "600" },
+  list: { flex: 1 },
+  sectionTitle: {
     fontSize: 12,
     fontWeight: "600",
-    marginBottom: 12,
+    paddingHorizontal: 16,
+    paddingTop: 20,
+    paddingBottom: 8,
   },
   settingItem: {
     flexDirection: "row",
     alignItems: "center",
+    paddingHorizontal: 16,
     paddingVertical: 12,
   },
-  settingIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
+  settingIconBg: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
     alignItems: "center",
     justifyContent: "center",
     marginRight: 12,
   },
-  iconText: {
-    fontSize: 24,
-  },
-  settingContent: {
-    flex: 1,
-  },
-  settingTitle: {
-    fontSize: 16,
-    fontWeight: "500",
-  },
+  settingContent: { flex: 1 },
+  settingTitle: { fontSize: 15, fontWeight: "500" },
+  settingSubtitle: { fontSize: 12, marginTop: 2 },
+  bottomPadding: { height: 24 },
 });

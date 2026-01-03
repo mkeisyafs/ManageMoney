@@ -1,24 +1,19 @@
 import { useEffect } from "react";
 import { router } from "expo-router";
 import { View, ActivityIndicator, StyleSheet } from "react-native";
-import { useSettings } from "@/hooks/useSettings";
 import { useAuth } from "@/contexts/AuthContext";
-import { isInitialized } from "@/services/storage/mmkv";
 
 export default function Index() {
-  const { settings } = useSettings();
   const { isLocked, isAuthenticated } = useAuth();
 
   useEffect(() => {
-    // Check navigation target
-    if (!isInitialized() || !settings.onboardingCompleted) {
-      router.replace("/(auth)/onboarding");
-    } else if (isLocked && !isAuthenticated) {
+    // Always go to tabs (transactions is the first tab now)
+    if (isLocked && !isAuthenticated) {
       router.replace("/(auth)/lock");
     } else {
       router.replace("/(tabs)");
     }
-  }, [settings.onboardingCompleted, isLocked, isAuthenticated]);
+  }, [isLocked, isAuthenticated]);
 
   return (
     <View style={styles.container}>
@@ -32,6 +27,6 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#f5f5f5",
+    backgroundColor: "#121212",
   },
 });

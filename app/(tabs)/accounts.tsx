@@ -1,3 +1,4 @@
+import { useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -12,11 +13,13 @@ import { useAccounts } from "@/hooks/useAccounts";
 import { useSettings } from "@/hooks/useSettings";
 import { formatCurrency } from "@/utils/formatters";
 import { Account } from "@/types";
+import { Plus, ChevronRight } from "lucide-react-native";
+
+type ViewTab = "aset" | "liabilitas";
 
 export default function AccountsScreen() {
   const { colors } = useTheme();
   const {
-    accounts,
     balances,
     totalAssets,
     totalLiabilities,
@@ -25,8 +28,8 @@ export default function AccountsScreen() {
     liabilityAccounts,
   } = useAccounts();
   const { settings } = useSettings();
+  const [activeTab, setActiveTab] = useState<ViewTab>("aset");
 
-  // Create accounts with balance for display
   const assetsWithBalance = assetAccounts.map((account) => ({
     ...account,
     balance: balances.get(account.id) || 0,
@@ -37,131 +40,172 @@ export default function AccountsScreen() {
     balance: balances.get(account.id) || 0,
   }));
 
+  const accounts =
+    activeTab === "aset" ? assetsWithBalance : liabilitiesWithBalance;
+  const total = activeTab === "aset" ? totalAssets : totalLiabilities;
+
+  const tabs: { key: ViewTab; label: string; count: number }[] = [
+    { key: "aset", label: "Aset", count: assetsWithBalance.length },
+    {
+      key: "liabilitas",
+      label: "Liabilitas",
+      count: liabilitiesWithBalance.length,
+    },
+  ];
+
   return (
     <SafeAreaView
       style={[styles.container, { backgroundColor: colors.background }]}
     >
-      <ScrollView>
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={[styles.title, { color: colors.text }]}>Akun Saya</Text>
-          <TouchableOpacity
-            style={[styles.addButton, { backgroundColor: colors.primary }]}
-            onPress={() => router.push("/account/new")}
+      {/* Header */}
+      <View style={[styles.header, { borderBottomColor: colors.border }]}>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>Aset</Text>
+        <TouchableOpacity onPress={() => router.push("/account/new")}>
+          <Plus size={24} color={colors.text} />
+        </TouchableOpacity>
+      </View>
+
+      {/* Summary Row */}
+      <View style={[styles.summaryRow, { borderBottomColor: colors.border }]}>
+        <View style={styles.summaryItem}>
+          <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>
+            Total Aset
+          </Text>
+          <Text style={[styles.summaryValue, { color: colors.income }]}>
+            {formatCurrency(totalAssets, settings.currency).replace("Rp", "")}
+          </Text>
+        </View>
+        <View style={styles.summaryItem}>
+          <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>
+            Liabilitas
+          </Text>
+          <Text style={[styles.summaryValue, { color: colors.expense }]}>
+            {formatCurrency(totalLiabilities, settings.currency).replace(
+              "Rp",
+              ""
+            )}
+          </Text>
+        </View>
+        <View style={styles.summaryItem}>
+          <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>
+            Net Worth
+          </Text>
+          <Text
+            style={[
+              styles.summaryValue,
+              { color: netWorth >= 0 ? colors.income : colors.expense },
+            ]}
           >
-            <Text style={styles.addButtonText}>+ Tambah Akun</Text>
+            {formatCurrency(netWorth, settings.currency).replace("Rp", "")}
+          </Text>
+        </View>
+      </View>
+
+      {/* View Tabs */}
+      <View style={styles.tabsContainer}>
+        {tabs.map((tab) => (
+          <TouchableOpacity
+            key={tab.key}
+            style={[
+              styles.tab,
+              activeTab === tab.key && styles.tabActive,
+              activeTab === tab.key && { borderBottomColor: colors.text },
+            ]}
+            onPress={() => setActiveTab(tab.key)}
+          >
+            <Text
+              style={[
+                styles.tabText,
+                {
+                  color:
+                    activeTab === tab.key ? colors.text : colors.textSecondary,
+                },
+              ]}
+            >
+              {tab.label} ({tab.count})
+            </Text>
           </TouchableOpacity>
-        </View>
+        ))}
+      </View>
 
-        {/* Summary Card */}
-        <View style={[styles.summaryCard, { backgroundColor: colors.primary }]}>
-          <Text style={styles.summaryLabel}>Total Kekayaan Bersih</Text>
-          <Text style={styles.summaryValue}>
-            {formatCurrency(netWorth, settings.currency)}
-          </Text>
-          <View style={styles.summaryDetails}>
-            <View style={styles.summaryItem}>
-              <Text style={styles.summaryItemLabel}>📈 Total Aset</Text>
-              <Text style={styles.summaryItemValue}>
-                {formatCurrency(totalAssets, settings.currency)}
-              </Text>
-            </View>
-            <View style={styles.summaryItem}>
-              <Text style={styles.summaryItemLabel}>📉 Total Liabilitas</Text>
-              <Text style={styles.summaryItemValue}>
-                {formatCurrency(totalLiabilities, settings.currency)}
-              </Text>
-            </View>
+      {/* Account List */}
+      <ScrollView style={styles.list}>
+        {accounts.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+              Belum ada {activeTab}
+            </Text>
+            <TouchableOpacity
+              style={[styles.addButton, { backgroundColor: colors.primary }]}
+              onPress={() => router.push("/account/new")}
+            >
+              <Text style={styles.addButtonText}>+ Tambah Akun</Text>
+            </TouchableOpacity>
           </View>
-        </View>
-
-        {/* Assets Section */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>
-            Aset ({assetsWithBalance.length})
-          </Text>
-          {assetsWithBalance.length === 0 ? (
-            <View style={[styles.emptyCard, { backgroundColor: colors.card }]}>
-              <Text style={{ color: colors.textSecondary }}>
-                Belum ada akun aset
-              </Text>
-            </View>
-          ) : (
-            assetsWithBalance.map((account: Account & { balance: number }) => (
-              <TouchableOpacity
-                key={account.id}
-                style={[styles.accountItem, { backgroundColor: colors.card }]}
-                onPress={() => router.push(`/account/${account.id}`)}
+        ) : (
+          accounts.map((account: Account & { balance: number }) => (
+            <TouchableOpacity
+              key={account.id}
+              style={styles.accountItem}
+              onPress={() => router.push(`/account/${account.id}`)}
+            >
+              <View
+                style={[
+                  styles.accountIconBg,
+                  { backgroundColor: account.color },
+                ]}
               >
-                <View
-                  style={[
-                    styles.accountIcon,
-                    { backgroundColor: account.color },
-                  ]}
-                >
-                  <Text style={styles.iconText}>{account.icon}</Text>
-                </View>
-                <View style={styles.accountInfo}>
-                  <Text style={[styles.accountName, { color: colors.text }]}>
-                    {account.name}
-                  </Text>
-                  <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
-                    {account.type}
-                  </Text>
-                </View>
-                <Text style={[styles.accountBalance, { color: colors.income }]}>
-                  {formatCurrency(account.balance, settings.currency)}
+                <Text style={styles.accountIcon}>{account.icon}</Text>
+              </View>
+              <View style={styles.accountInfo}>
+                <Text style={[styles.accountName, { color: colors.text }]}>
+                  {account.name}
                 </Text>
-              </TouchableOpacity>
-            ))
-          )}
-        </View>
-
-        {/* Liabilities Section */}
-        <View style={[styles.section, { marginBottom: 24 }]}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>
-            Liabilitas ({liabilitiesWithBalance.length})
-          </Text>
-          {liabilitiesWithBalance.length === 0 ? (
-            <View style={[styles.emptyCard, { backgroundColor: colors.card }]}>
-              <Text style={{ color: colors.textSecondary }}>
-                Belum ada akun liabilitas
-              </Text>
-            </View>
-          ) : (
-            liabilitiesWithBalance.map(
-              (account: Account & { balance: number }) => (
-                <TouchableOpacity
-                  key={account.id}
-                  style={[styles.accountItem, { backgroundColor: colors.card }]}
-                  onPress={() => router.push(`/account/${account.id}`)}
+                <Text
+                  style={[styles.accountType, { color: colors.textSecondary }]}
                 >
-                  <View
-                    style={[
-                      styles.accountIcon,
-                      { backgroundColor: account.color },
-                    ]}
-                  >
-                    <Text style={styles.iconText}>{account.icon}</Text>
-                  </View>
-                  <View style={styles.accountInfo}>
-                    <Text style={[styles.accountName, { color: colors.text }]}>
-                      {account.name}
-                    </Text>
-                    <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
-                      {account.type}
-                    </Text>
-                  </View>
-                  <Text
-                    style={[styles.accountBalance, { color: colors.expense }]}
-                  >
-                    {formatCurrency(account.balance, settings.currency)}
-                  </Text>
-                </TouchableOpacity>
-              )
-            )
-          )}
-        </View>
+                  {account.type === "cash"
+                    ? "Tunai"
+                    : account.type === "bank"
+                    ? "Bank"
+                    : account.type === "credit_card"
+                    ? "Kartu Kredit"
+                    : account.type}
+                </Text>
+              </View>
+              <Text
+                style={[
+                  styles.accountBalance,
+                  {
+                    color:
+                      activeTab === "aset" ? colors.income : colors.expense,
+                  },
+                ]}
+              >
+                Rp {account.balance.toLocaleString("id-ID")}
+              </Text>
+            </TouchableOpacity>
+          ))
+        )}
+
+        {/* Total */}
+        {accounts.length > 0 && (
+          <View style={[styles.totalRow, { borderTopColor: colors.border }]}>
+            <Text style={[styles.totalLabel, { color: colors.textSecondary }]}>
+              Total {activeTab === "aset" ? "Aset" : "Liabilitas"}
+            </Text>
+            <Text
+              style={[
+                styles.totalValue,
+                {
+                  color: activeTab === "aset" ? colors.income : colors.expense,
+                },
+              ]}
+            >
+              Rp {total.toLocaleString("id-ID")}
+            </Text>
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -171,50 +215,59 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   header: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    padding: 20,
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
   },
-  title: { fontSize: 28, fontWeight: "bold" },
-  addButton: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 },
+  headerTitle: { fontSize: 18, fontWeight: "600" },
+  summaryRow: {
+    flexDirection: "row",
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+  },
+  summaryItem: { flex: 1, alignItems: "center" },
+  summaryLabel: { fontSize: 11, marginBottom: 4 },
+  summaryValue: { fontSize: 13, fontWeight: "600" },
+  tabsContainer: {
+    flexDirection: "row",
+    paddingHorizontal: 16,
+  },
+  tab: { flex: 1, paddingVertical: 12, alignItems: "center" },
+  tabActive: { borderBottomWidth: 2 },
+  tabText: { fontSize: 14, fontWeight: "500" },
+  list: { flex: 1, padding: 16 },
+  emptyState: { alignItems: "center", paddingVertical: 48 },
+  emptyText: { fontSize: 14, marginBottom: 16 },
+  addButton: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 20 },
   addButtonText: { color: "#fff", fontWeight: "600" },
-  summaryCard: { margin: 16, marginTop: 0, padding: 20, borderRadius: 20 },
-  summaryLabel: { color: "rgba(255,255,255,0.8)", fontSize: 14 },
-  summaryValue: {
-    color: "#fff",
-    fontSize: 28,
-    fontWeight: "bold",
-    marginTop: 8,
-  },
-  summaryDetails: { flexDirection: "row", marginTop: 20 },
-  summaryItem: { flex: 1 },
-  summaryItemLabel: { color: "rgba(255,255,255,0.7)", fontSize: 12 },
-  summaryItemValue: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-    marginTop: 4,
-  },
-  section: { paddingHorizontal: 16, marginTop: 16 },
-  sectionTitle: { fontSize: 18, fontWeight: "600", marginBottom: 12 },
-  emptyCard: { padding: 24, borderRadius: 12, alignItems: "center" },
   accountItem: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 8,
+    paddingVertical: 12,
   },
-  accountIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+  accountIconBg: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: "center",
     justifyContent: "center",
     marginRight: 12,
   },
-  iconText: { fontSize: 24 },
+  accountIcon: { fontSize: 20 },
   accountInfo: { flex: 1 },
-  accountName: { fontSize: 16, fontWeight: "500" },
-  accountBalance: { fontSize: 16, fontWeight: "600" },
+  accountName: { fontSize: 15, fontWeight: "500" },
+  accountType: { fontSize: 12, marginTop: 2 },
+  accountBalance: { fontSize: 15, fontWeight: "600" },
+  totalRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingVertical: 16,
+    marginTop: 16,
+    borderTopWidth: 1,
+  },
+  totalLabel: { fontSize: 14, fontWeight: "500" },
+  totalValue: { fontSize: 16, fontWeight: "600" },
 });
