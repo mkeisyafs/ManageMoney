@@ -7,18 +7,15 @@ import {
   ScrollView,
   Alert,
   StyleSheet,
+  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useCategories } from "@/hooks/useCategories";
-import { useTransactions } from "@/hooks/useTransactions";
-import {
-  getTransactionById,
-  deleteTransaction,
-  updateTransaction,
-} from "@/services/storage/mmkv";
+import { useTransactionContext } from "@/contexts/TransactionContext";
+import { getTransactionById } from "@/services/storage/mmkv";
 import { formatCurrency } from "@/utils/formatters";
 import { format, parseISO } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
@@ -65,9 +62,12 @@ export default function TransactionEditScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { accounts } = useAccounts();
   const { expenseCategories, incomeCategories } = useCategories();
-  const { refresh } = useTransactions();
+  const { updateTransaction, deleteTransaction, transactions } =
+    useTransactionContext();
 
-  const transaction = getTransactionById(id);
+  // Find transaction from context (shared state)
+  const transaction =
+    transactions.find((t) => t.id === id) || getTransactionById(id);
 
   const [transactionType, setTransactionType] = useState<TransactionType>(
     transaction?.type || "expense"
@@ -155,23 +155,31 @@ export default function TransactionEditScreen() {
       note: note.trim() || undefined,
     });
 
-    refresh();
     handleGoBack();
   };
 
   const handleDelete = () => {
-    Alert.alert("Hapus Transaksi?", "Transaksi ini akan dihapus permanen.", [
-      { text: "Batal", style: "cancel" },
-      {
-        text: "Hapus",
-        style: "destructive",
-        onPress: () => {
-          deleteTransaction(id);
-          refresh();
-          handleGoBack();
+    // For web, use confirm instead of Alert
+    if (Platform.OS === "web") {
+      if (
+        window.confirm("Hapus Transaksi? Transaksi ini akan dihapus permanen.")
+      ) {
+        deleteTransaction(id);
+        handleGoBack();
+      }
+    } else {
+      Alert.alert("Hapus Transaksi?", "Transaksi ini akan dihapus permanen.", [
+        { text: "Batal", style: "cancel" },
+        {
+          text: "Hapus",
+          style: "destructive",
+          onPress: () => {
+            deleteTransaction(id);
+            handleGoBack();
+          },
         },
-      },
-    ]);
+      ]);
+    }
   };
 
   const typeColor =
