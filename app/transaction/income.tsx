@@ -14,7 +14,7 @@ import { useTheme } from "@/contexts/ThemeContext";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useCategories } from "@/hooks/useCategories";
 import { useSettings } from "@/hooks/useSettings";
-import { saveTransaction } from "@/services/storage/mmkv";
+import { useTransactionContext } from "@/contexts/TransactionContext";
 import { formatCurrency } from "@/utils/formatters";
 
 export default function IncomeScreen() {
@@ -22,6 +22,7 @@ export default function IncomeScreen() {
   const { accounts } = useAccounts();
   const { incomeCategories } = useCategories();
   const { settings } = useSettings();
+  const { addTransaction } = useTransactionContext();
   const [amount, setAmount] = useState("");
   const [accountId, setAccountId] = useState(accounts[0]?.id || "");
   const [categoryId, setCategoryId] = useState(incomeCategories[0]?.id || "");
@@ -53,7 +54,7 @@ export default function IncomeScreen() {
       return;
     }
 
-    saveTransaction({
+    addTransaction({
       type: "income",
       amount: amountNum,
       accountId,

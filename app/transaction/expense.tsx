@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   View,
   Text,
@@ -7,13 +7,15 @@ import {
   ScrollView,
   Alert,
   StyleSheet,
+  Modal,
+  FlatList,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useCategories } from "@/hooks/useCategories";
-import { saveTransaction } from "@/services/storage/mmkv";
+import { useTransactionContext } from "@/contexts/TransactionContext";
 import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 import {
@@ -25,6 +27,7 @@ import {
   Globe,
   X,
   Calendar,
+  ChevronRight,
 } from "lucide-react-native";
 
 type TransactionType = "income" | "expense" | "transfer";
@@ -33,14 +36,47 @@ export default function ExpenseScreen() {
   const { colors } = useTheme();
   const { accounts } = useAccounts();
   const { expenseCategories, incomeCategories } = useCategories();
+  const { addTransaction } = useTransactionContext();
+
   const [transactionType, setTransactionType] =
     useState<TransactionType>("expense");
   const [amount, setAmount] = useState("");
-  const [accountId, setAccountId] = useState(accounts[0]?.id || "");
-  const [categoryId, setCategoryId] = useState(expenseCategories[0]?.id || "");
+  const [accountId, setAccountId] = useState("");
+  const [toAccountId, setToAccountId] = useState("");
+  const [categoryId, setCategoryId] = useState("");
   const [note, setNote] = useState("");
   const [description, setDescription] = useState("");
   const [showNumberPad, setShowNumberPad] = useState(true);
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [showAccountModal, setShowAccountModal] = useState(false);
+  const [showToAccountModal, setShowToAccountModal] = useState(false);
+
+  // Initialize default values when data is loaded
+  useEffect(() => {
+    if (accounts.length > 0 && !accountId) {
+      setAccountId(accounts[0].id);
+      if (accounts.length > 1) {
+        setToAccountId(accounts[1].id);
+      }
+    }
+  }, [accounts]);
+
+  useEffect(() => {
+    if (
+      expenseCategories.length > 0 &&
+      !categoryId &&
+      transactionType === "expense"
+    ) {
+      setCategoryId(expenseCategories[0].id);
+    }
+    if (
+      incomeCategories.length > 0 &&
+      !categoryId &&
+      transactionType === "income"
+    ) {
+      setCategoryId(incomeCategories[0].id);
+    }
+  }, [expenseCategories, incomeCategories, transactionType]);
 
   const currentDate = new Date();
   const formattedDate = format(currentDate, "dd/MM/yy (EEE)", {
@@ -52,6 +88,21 @@ export default function ExpenseScreen() {
     transactionType === "income" ? incomeCategories : expenseCategories;
   const selectedCategory = categories.find((c) => c.id === categoryId);
   const selectedAccount = accounts.find((a) => a.id === accountId);
+  const selectedToAccount = accounts.find((a) => a.id === toAccountId);
+
+  // Dynamic color based on transaction type
+  const typeColor = useMemo(() => {
+    switch (transactionType) {
+      case "income":
+        return colors.income;
+      case "expense":
+        return colors.expense;
+      case "transfer":
+        return "#2196F3";
+      default:
+        return colors.expense;
+    }
+  }, [transactionType, colors]);
 
   const handleNumberPress = (num: string) => {
     if (num === ",") {
@@ -69,14 +120,15 @@ export default function ExpenseScreen() {
 
   const formatDisplayAmount = (text: string) => {
     const numbers = text.replace(/[^0-9,]/g, "");
+    if (!numbers) return "Rp 0";
     const parts = numbers.split(",");
     const integerPart = parts[0]
       ? parseInt(parts[0]).toLocaleString("id-ID")
-      : "";
+      : "0";
     if (parts.length > 1) {
-      return integerPart + "," + parts[1].slice(0, 2);
+      return "Rp " + integerPart + "," + parts[1].slice(0, 2);
     }
-    return integerPart;
+    return "Rp " + integerPart;
   };
 
   const handleSave = () => {
@@ -96,16 +148,33 @@ export default function ExpenseScreen() {
       Alert.alert("Error", "Pilih kategori");
       return;
     }
+    if (transactionType === "transfer" && !toAccountId) {
+      Alert.alert("Error", "Pilih akun tujuan");
+      return;
+    }
+    if (transactionType === "transfer" && accountId === toAccountId) {
+      Alert.alert("Error", "Akun sumber dan tujuan tidak boleh sama");
+      return;
+    }
 
-    saveTransaction({
-      type: transactionType,
-      amount: amountNum,
-      accountId,
-      categoryId: transactionType !== "transfer" ? categoryId : undefined,
-      note: note.trim() || undefined,
-    });
+    try {
+      const result = addTransaction({
+        type: transactionType,
+        amount: amountNum,
+        accountId,
+        toAccountId: transactionType === "transfer" ? toAccountId : undefined,
+        categoryId: transactionType !== "transfer" ? categoryId : undefined,
+        note: note.trim() || description.trim() || undefined,
+      });
 
-    router.back();
+      console.log("Transaction saved:", result);
+
+      // Navigate back immediately (Alert.alert doesn't work well on web)
+      router.back();
+    } catch (error) {
+      console.error("Error saving transaction:", error);
+      Alert.alert("Error", "Gagal menyimpan transaksi");
+    }
   };
 
   const typeTabs: { key: TransactionType; label: string }[] = [
@@ -150,7 +219,7 @@ export default function ExpenseScreen() {
           style={[
             styles.numButton,
             styles.doneButton,
-            { backgroundColor: colors.expense },
+            { backgroundColor: typeColor },
           ]}
           onPress={handleSave}
         >
@@ -182,17 +251,216 @@ export default function ExpenseScreen() {
     );
   };
 
+  // Category Modal
+  const renderCategoryModal = () => (
+    <Modal
+      visible={showCategoryModal}
+      animationType="slide"
+      transparent={true}
+      onRequestClose={() => setShowCategoryModal(false)}
+    >
+      <View style={styles.modalOverlay}>
+        <View
+          style={[styles.modalContent, { backgroundColor: colors.background }]}
+        >
+          <View style={styles.modalHeader}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>
+              Pilih Kategori
+            </Text>
+            <TouchableOpacity onPress={() => setShowCategoryModal(false)}>
+              <X size={24} color={colors.text} />
+            </TouchableOpacity>
+          </View>
+          <FlatList
+            data={categories}
+            keyExtractor={(item) => item.id}
+            numColumns={3}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={[
+                  styles.categoryItem,
+                  {
+                    backgroundColor:
+                      categoryId === item.id ? typeColor + "30" : colors.card,
+                    borderColor:
+                      categoryId === item.id ? typeColor : colors.border,
+                  },
+                ]}
+                onPress={() => {
+                  setCategoryId(item.id);
+                  setShowCategoryModal(false);
+                }}
+              >
+                <Text style={styles.categoryIcon}>{item.icon}</Text>
+                <Text
+                  style={[styles.categoryName, { color: colors.text }]}
+                  numberOfLines={1}
+                >
+                  {item.name}
+                </Text>
+              </TouchableOpacity>
+            )}
+          />
+        </View>
+      </View>
+    </Modal>
+  );
+
+  // Account Modal
+  const renderAccountModal = () => (
+    <Modal
+      visible={showAccountModal}
+      animationType="slide"
+      transparent={true}
+      onRequestClose={() => setShowAccountModal(false)}
+    >
+      <View style={styles.modalOverlay}>
+        <View
+          style={[styles.modalContent, { backgroundColor: colors.background }]}
+        >
+          <View style={styles.modalHeader}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>
+              Pilih Akun
+            </Text>
+            <TouchableOpacity onPress={() => setShowAccountModal(false)}>
+              <X size={24} color={colors.text} />
+            </TouchableOpacity>
+          </View>
+          <FlatList
+            data={accounts}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={[
+                  styles.accountItem,
+                  {
+                    backgroundColor:
+                      accountId === item.id ? typeColor + "30" : colors.card,
+                    borderColor:
+                      accountId === item.id ? typeColor : colors.border,
+                  },
+                ]}
+                onPress={() => {
+                  setAccountId(item.id);
+                  setShowAccountModal(false);
+                }}
+              >
+                <Text style={styles.accountIcon}>{item.icon}</Text>
+                <View style={styles.accountInfo}>
+                  <Text style={[styles.accountName, { color: colors.text }]}>
+                    {item.name}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.accountType,
+                      { color: colors.textSecondary },
+                    ]}
+                  >
+                    {item.type}
+                  </Text>
+                </View>
+                {accountId === item.id && (
+                  <View
+                    style={[styles.checkmark, { backgroundColor: typeColor }]}
+                  >
+                    <Text style={{ color: "#fff" }}>✓</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            )}
+          />
+        </View>
+      </View>
+    </Modal>
+  );
+
+  // To Account Modal (for transfers)
+  const renderToAccountModal = () => (
+    <Modal
+      visible={showToAccountModal}
+      animationType="slide"
+      transparent={true}
+      onRequestClose={() => setShowToAccountModal(false)}
+    >
+      <View style={styles.modalOverlay}>
+        <View
+          style={[styles.modalContent, { backgroundColor: colors.background }]}
+        >
+          <View style={styles.modalHeader}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>
+              Pilih Akun Tujuan
+            </Text>
+            <TouchableOpacity onPress={() => setShowToAccountModal(false)}>
+              <X size={24} color={colors.text} />
+            </TouchableOpacity>
+          </View>
+          <FlatList
+            data={accounts.filter((a) => a.id !== accountId)}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={[
+                  styles.accountItem,
+                  {
+                    backgroundColor:
+                      toAccountId === item.id ? typeColor + "30" : colors.card,
+                    borderColor:
+                      toAccountId === item.id ? typeColor : colors.border,
+                  },
+                ]}
+                onPress={() => {
+                  setToAccountId(item.id);
+                  setShowToAccountModal(false);
+                }}
+              >
+                <Text style={styles.accountIcon}>{item.icon}</Text>
+                <View style={styles.accountInfo}>
+                  <Text style={[styles.accountName, { color: colors.text }]}>
+                    {item.name}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.accountType,
+                      { color: colors.textSecondary },
+                    ]}
+                  >
+                    {item.type}
+                  </Text>
+                </View>
+                {toAccountId === item.id && (
+                  <View
+                    style={[styles.checkmark, { backgroundColor: typeColor }]}
+                  >
+                    <Text style={{ color: "#fff" }}>✓</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            )}
+          />
+        </View>
+      </View>
+    </Modal>
+  );
+
   return (
     <SafeAreaView
       style={[styles.container, { backgroundColor: colors.background }]}
     >
+      {renderCategoryModal()}
+      {renderAccountModal()}
+      {renderToAccountModal()}
+
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()}>
           <ChevronLeft size={24} color={colors.text} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.text }]}>
-          Pengeluaran
+          {transactionType === "income"
+            ? "Pendapatan"
+            : transactionType === "expense"
+            ? "Pengeluaran"
+            : "Transfer"}
         </Text>
         <TouchableOpacity>
           <Star size={24} color={colors.text} />
@@ -208,7 +476,13 @@ export default function ExpenseScreen() {
               styles.typeTab,
               {
                 backgroundColor:
-                  transactionType === tab.key ? colors.expense : "transparent",
+                  transactionType === tab.key
+                    ? tab.key === "income"
+                      ? colors.income
+                      : tab.key === "expense"
+                      ? colors.expense
+                      : "#2196F3"
+                    : "transparent",
                 borderColor: colors.border,
               },
             ]}
@@ -263,46 +537,112 @@ export default function ExpenseScreen() {
         </View>
 
         {/* Total Row */}
-        <View style={[styles.formRow, { borderBottomColor: colors.expense }]}>
+        <TouchableOpacity
+          style={[styles.formRow, { borderBottomColor: typeColor }]}
+          onPress={() => setShowNumberPad(true)}
+        >
           <Text style={[styles.formLabel, { color: colors.textSecondary }]}>
             Total
           </Text>
-          <Text style={[styles.amountText, { color: colors.expense }]}>
-            {formatDisplayAmount(amount) || "0"}
+          <Text style={[styles.amountText, { color: typeColor }]}>
+            {formatDisplayAmount(amount)}
           </Text>
-        </View>
-
-        {/* Category Row */}
-        <TouchableOpacity
-          style={[styles.formRow, { borderBottomColor: colors.border }]}
-        >
-          <Text style={[styles.formLabel, { color: colors.textSecondary }]}>
-            Kategori
-          </Text>
-          <View style={styles.formValue}>
-            {selectedCategory && (
-              <Text style={[styles.formValueText, { color: colors.text }]}>
-                {selectedCategory.name}
-              </Text>
-            )}
-          </View>
         </TouchableOpacity>
+
+        {/* Category Row - Only show for income/expense */}
+        {transactionType !== "transfer" && (
+          <TouchableOpacity
+            style={[styles.formRow, { borderBottomColor: colors.border }]}
+            onPress={() => setShowCategoryModal(true)}
+          >
+            <Text style={[styles.formLabel, { color: colors.textSecondary }]}>
+              Kategori
+            </Text>
+            <View style={styles.formValue}>
+              {selectedCategory ? (
+                <>
+                  <Text style={{ marginRight: 8 }}>
+                    {selectedCategory.icon}
+                  </Text>
+                  <Text style={[styles.formValueText, { color: colors.text }]}>
+                    {selectedCategory.name}
+                  </Text>
+                </>
+              ) : (
+                <Text
+                  style={[
+                    styles.formValueText,
+                    { color: colors.textSecondary },
+                  ]}
+                >
+                  Pilih kategori
+                </Text>
+              )}
+            </View>
+            <ChevronRight size={20} color={colors.textSecondary} />
+          </TouchableOpacity>
+        )}
 
         {/* Account Row */}
         <TouchableOpacity
           style={[styles.formRow, { borderBottomColor: colors.border }]}
+          onPress={() => setShowAccountModal(true)}
         >
           <Text style={[styles.formLabel, { color: colors.textSecondary }]}>
-            Aset
+            {transactionType === "transfer" ? "Dari" : "Aset"}
           </Text>
           <View style={styles.formValue}>
-            {selectedAccount && (
-              <Text style={[styles.formValueText, { color: colors.text }]}>
-                {selectedAccount.name}
+            {selectedAccount ? (
+              <>
+                <Text style={{ marginRight: 8 }}>{selectedAccount.icon}</Text>
+                <Text style={[styles.formValueText, { color: colors.text }]}>
+                  {selectedAccount.name}
+                </Text>
+              </>
+            ) : (
+              <Text
+                style={[styles.formValueText, { color: colors.textSecondary }]}
+              >
+                Pilih akun
               </Text>
             )}
           </View>
+          <ChevronRight size={20} color={colors.textSecondary} />
         </TouchableOpacity>
+
+        {/* To Account Row - Only show for transfer */}
+        {transactionType === "transfer" && (
+          <TouchableOpacity
+            style={[styles.formRow, { borderBottomColor: colors.border }]}
+            onPress={() => setShowToAccountModal(true)}
+          >
+            <Text style={[styles.formLabel, { color: colors.textSecondary }]}>
+              Ke
+            </Text>
+            <View style={styles.formValue}>
+              {selectedToAccount ? (
+                <>
+                  <Text style={{ marginRight: 8 }}>
+                    {selectedToAccount.icon}
+                  </Text>
+                  <Text style={[styles.formValueText, { color: colors.text }]}>
+                    {selectedToAccount.name}
+                  </Text>
+                </>
+              ) : (
+                <Text
+                  style={[
+                    styles.formValueText,
+                    { color: colors.textSecondary },
+                  ]}
+                >
+                  Pilih akun tujuan
+                </Text>
+              )}
+            </View>
+            <ChevronRight size={20} color={colors.textSecondary} />
+          </TouchableOpacity>
+        )}
 
         {/* Note Row */}
         <View style={[styles.formRow, { borderBottomColor: colors.border }]}>
@@ -311,10 +651,11 @@ export default function ExpenseScreen() {
           </Text>
           <TextInput
             style={[styles.noteInput, { color: colors.text }]}
-            placeholder=""
+            placeholder="Tambahkan catatan..."
             placeholderTextColor={colors.textSecondary}
             value={note}
             onChangeText={setNote}
+            onFocus={() => setShowNumberPad(false)}
           />
         </View>
 
@@ -327,6 +668,7 @@ export default function ExpenseScreen() {
             value={description}
             onChangeText={setDescription}
             multiline
+            onFocus={() => setShowNumberPad(false)}
           />
           <TouchableOpacity style={styles.cameraButton}>
             <Camera size={24} color={colors.textSecondary} />
@@ -336,13 +678,20 @@ export default function ExpenseScreen() {
         {/* Action Buttons */}
         <View style={styles.actionButtons}>
           <TouchableOpacity
-            style={[styles.saveButton, { backgroundColor: colors.expense }]}
+            style={[styles.saveButton, { backgroundColor: typeColor }]}
             onPress={handleSave}
           >
             <Text style={styles.saveButtonText}>Menyimpan</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.continueButton, { backgroundColor: colors.card }]}
+            onPress={() => {
+              handleSave();
+              // Reset form for next entry
+              setAmount("");
+              setNote("");
+              setDescription("");
+            }}
           >
             <Text style={[styles.continueButtonText, { color: colors.text }]}>
               Lanjut
@@ -484,4 +833,57 @@ const styles = StyleSheet.create({
   numButtonText: { fontSize: 24, fontWeight: "500" },
   doneButton: { flex: 2 },
   doneText: { fontSize: 16, fontWeight: "600", color: "#fff" },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "flex-end",
+  },
+  modalContent: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 16,
+    maxHeight: "70%",
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(255,255,255,0.1)",
+  },
+  modalTitle: { fontSize: 18, fontWeight: "600" },
+  categoryItem: {
+    flex: 1,
+    alignItems: "center",
+    padding: 12,
+    margin: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    minWidth: 100,
+    maxWidth: "31%",
+  },
+  categoryIcon: { fontSize: 28, marginBottom: 8 },
+  categoryName: { fontSize: 12, textAlign: "center" },
+  accountItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 16,
+    marginVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  accountIcon: { fontSize: 28, marginRight: 12 },
+  accountInfo: { flex: 1 },
+  accountName: { fontSize: 16, fontWeight: "500" },
+  accountType: { fontSize: 12, marginTop: 2 },
+  checkmark: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
 });

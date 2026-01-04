@@ -6,6 +6,7 @@ import { StatusBar } from "expo-status-bar";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { ThemeProvider, useTheme } from "@/contexts/ThemeContext";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { TransactionProvider } from "@/contexts/TransactionContext";
 import {
   loadCache,
   initializeDefaultData,
@@ -104,7 +105,9 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <ThemeProvider>
         <AuthProvider>
-          <RootLayoutNav />
+          <TransactionProvider>
+            <RootLayoutNav />
+          </TransactionProvider>
         </AuthProvider>
       </ThemeProvider>
     </GestureHandlerRootView>

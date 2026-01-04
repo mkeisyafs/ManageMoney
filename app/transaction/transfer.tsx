@@ -12,11 +12,12 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useAccounts } from "@/hooks/useAccounts";
-import { saveTransaction } from "@/services/storage/mmkv";
+import { useTransactionContext } from "@/contexts/TransactionContext";
 
 export default function TransferScreen() {
   const { colors } = useTheme();
   const { accounts } = useAccounts();
+  const { addTransaction } = useTransactionContext();
   const [amount, setAmount] = useState("");
   const [fromAccountId, setFromAccountId] = useState(accounts[0]?.id || "");
   const [toAccountId, setToAccountId] = useState(accounts[1]?.id || "");
@@ -52,7 +53,7 @@ export default function TransferScreen() {
       return;
     }
 
-    saveTransaction({
+    addTransaction({
       type: "transfer",
       amount: amountNum,
       accountId: fromAccountId,

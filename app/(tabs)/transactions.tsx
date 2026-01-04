@@ -9,7 +9,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { useTheme } from "@/contexts/ThemeContext";
-import { useTransactions } from "@/hooks/useTransactions";
+import { useTransactionContext } from "@/contexts/TransactionContext";
 import { useSettings } from "@/hooks/useSettings";
 import { useCategories } from "@/hooks/useCategories";
 import { useAccounts } from "@/hooks/useAccounts";
@@ -34,7 +34,7 @@ type ViewTab = "harian" | "kalender" | "bulanan" | "tutup" | "memo";
 
 export default function TransactionsScreen() {
   const { colors } = useTheme();
-  const { transactions } = useTransactions();
+  const { transactions } = useTransactionContext();
   const { settings } = useSettings();
   const { getCategoryById } = useCategories();
   const { accounts } = useAccounts();
